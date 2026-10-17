@@ -1,0 +1,14 @@
+Konfigurasi: {'name': 'drop0', 'hidden': [128, 64], 'dropout': 0.0}
+
+              precision    recall  f1-score   support
+
+           0     0.8106    0.7979    0.8042      3078
+           1     0.8526    0.8624    0.8575      4172
+
+    accuracy                         0.8350      7250
+   macro avg     0.8316    0.8302    0.8308      7250
+weighted avg     0.8348    0.8350    0.8349      7250
+
+Confusion matrix:
+[[2456  622]
+ [ 574 3598]]
