@@ -1,0 +1,1 @@
+{"hp": {"lr": 0.001, "wd": 0.0001, "bs": 256, "max_epochs": 600, "patience": 30, "hidden": [128, 64], "dropout": 0.1}, "val_acc": 0.8281379342079163, "val_loss": 0.37897345423698425, "best_epoch": 176}

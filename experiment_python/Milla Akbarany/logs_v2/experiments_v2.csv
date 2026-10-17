@@ -1,0 +1,8 @@
+timestamp,dataset,attempt,exp,hidden,dropout,optimizer,lr,weight_decay,batch_size,max_epochs,early_stop_patience,best_epoch,epochs_run,seed,params,val_loss,val_acc,val_err,train_time_s,hardware,phase
+2026-10-17T18:35:37,A,02,base,"[128, 64]",0.0,AdamW,0.001,0.0001,256,600,30,251,281,42,9922,0.36065,0.83669,0.16331,297.1,"CPU Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",validation
+2026-10-17T18:36:54,A,02,lr3e-3,"[128, 64]",0.0,AdamW,0.003,0.0001,256,600,30,48,78,42,9922,0.3789,0.82566,0.17434,75.5,"CPU Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",validation
+2026-10-17T18:41:29,A,02,bs128,"[128, 64]",0.0,AdamW,0.001,0.0001,128,600,30,151,181,42,9922,0.3671,0.83269,0.16731,274.4,"CPU Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",validation
+2026-10-17T18:43:03,A,02,wide,"[256, 128]",0.0,AdamW,0.001,0.0001,256,600,30,163,193,42,36226,0.35931,0.83559,0.16441,93.7,"CPU Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",validation
+2026-10-17T18:43:49,A,02,deep3,"[256, 128, 64]",0.0,AdamW,0.001,0.0001,256,600,30,68,98,42,44482,0.35516,0.83683,0.16317,46.2,"CPU Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",validation
+2026-10-17T18:44:58,A,02,drop1,"[128, 64]",0.1,AdamW,0.001,0.0001,256,600,30,176,206,42,9922,0.37897,0.82814,0.17186,68.3,"CPU Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",validation
+2026-10-17T18:45:43,A,02,deep3_refit,"[256, 128, 64]",0.0,AdamW,0.001,0.0001,256,68,-,68,68,42,44482,-,-,-,45.1,"CPU Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",refit_full_train
