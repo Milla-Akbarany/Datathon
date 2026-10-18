@@ -1,0 +1,14 @@
+Konfigurasi: v1best {'lr': 0.001, 'wd': 0.0001, 'bs': 256, 'max_epochs': 500, 'patience': 40, 'hidden': [128, 64], 'dropout': 0.2}
+
+              precision    recall  f1-score   support
+
+           0     0.8753    0.9128    0.8936      1238
+           1     0.8283    0.7639    0.7948       682
+
+    accuracy                         0.8599      1920
+   macro avg     0.8518    0.8383    0.8442      1920
+weighted avg     0.8586    0.8599    0.8585      1920
+
+Confusion matrix:
+[[1130  108]
+ [ 161  521]]
