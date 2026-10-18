@@ -47,7 +47,8 @@ SEED = 42
 # ---------------------------------------------------------------------------
 # Pengaturan per dataset. Untuk B dan C: salin blok "A", ubah isinya, beri kunci "B" / "C".
 # Eksperimen: tiap entri hanya mengubah SATU faktor dari 'base'.
-# Kunci opsional per eksperimen: lr, wd, bs (menimpa nilai default dataset).
+# Kunci opsional per eksperimen: lr, wd, bs (menimpa nilai default dataset), cw=True (class weight
+# pada loss training; val loss untuk early stopping tetap tanpa bobot).
 # ---------------------------------------------------------------------------
 DATASET_CFG = {
     "A": dict(
@@ -62,7 +63,22 @@ DATASET_CFG = {
         ],
     ),
     # "B": dict(lr=..., wd=..., bs=..., max_epochs=..., patience=..., experiments=[...]),
-    # "C": dict(lr=..., wd=..., bs=..., max_epochs=..., patience=..., experiments=[...]),
+    # Dataset C: 9.600 baris, hanya 3 fitur, 2 kelas (64/36). Data kecil -> training cepat.
+    # Dengan 3 fitur, batas kelas kemungkinan nonlinear, jadi kedalaman/lebar yang diuji.
+    "C": dict(
+        lr=1e-3, wd=1e-4, bs=128, max_epochs=500, patience=40,
+        experiments=[
+            dict(name="base", hidden=[64, 64], dropout=0.0),
+            dict(name="depth1", hidden=[64], dropout=0.0),
+            dict(name="depth3", hidden=[64, 64, 64], dropout=0.0),
+            dict(name="wide", hidden=[256, 256], dropout=0.0),
+            dict(name="drop1", hidden=[64, 64], dropout=0.1),
+            dict(name="lr3e-3", hidden=[64, 64], dropout=0.0, lr=3e-3),
+            dict(name="v1best", hidden=[128, 64], dropout=0.2, bs=256),  # pembanding: konfigurasi terbaik v1
+            dict(name="drop3", hidden=[64, 64], dropout=0.3),
+            dict(name="cw", hidden=[64, 64], dropout=0.0, cw=True),
+        ],
+    ),
 }
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # outputs_v2/ dan logs_v2/ dibuat di sini
@@ -100,10 +116,11 @@ def evaluate(model, X, y, loss_fn):
     return loss_fn(logits, y).item(), logits.argmax(1)
 
 
-def fit(model, Xtr, ytr, Xva, yva, lr, wd, bs, max_epochs, patience, epochs=None):
+def fit(model, Xtr, ytr, Xva, yva, lr, wd, bs, max_epochs, patience, epochs=None, class_weight=None):
     """Xva ada: early stopping pada val loss, bobot terbaik dipulihkan.
     Xva None: latih tepat `epochs` epoch (refit di seluruh train)."""
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.CrossEntropyLoss()  # untuk val loss (selalu tanpa bobot)
+    train_fn = nn.CrossEntropyLoss(weight=class_weight)  # untuk training (bobot opsional)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
     n = Xtr.shape[0]
     hist = {"train_loss": [], "val_loss": []}
@@ -119,7 +136,7 @@ def fit(model, Xtr, ytr, Xva, yva, lr, wd, bs, max_epochs, patience, epochs=None
             if len(idx) < 2:  # BatchNorm butuh minimal 2 sampel
                 continue
             opt.zero_grad()
-            loss = loss_fn(model(Xtr[idx]), ytr[idx])
+            loss = train_fn(model(Xtr[idx]), ytr[idx])
             loss.backward()
             opt.step()
             run_loss += loss.item() * len(idx)
@@ -166,7 +183,36 @@ def resolve(dcfg, exp):
     hp = {k: dcfg[k] for k in ("lr", "wd", "bs", "max_epochs", "patience")}
     hp.update({k: v for k, v in exp.items() if k in hp})
     hp["hidden"], hp["dropout"] = list(exp["hidden"]), exp["dropout"]
+    if exp.get("cw"):  # hanya ditambahkan bila aktif, supaya cache eksperimen lama tetap cocok
+        hp["cw"] = True
     return hp
+
+
+def class_weights(y, n_cls, device):
+    """Bobot kelas = n / (K * jumlah_kelas), dihitung dari label bagian training saja."""
+    cnt = np.bincount(y, minlength=n_cls).astype(np.float32)
+    return torch.tensor(cnt.sum() / (n_cls * cnt), dtype=torch.float32, device=device)
+
+
+def run_baselines(Xtr_np, ytr, Xva_np, yva, D, log_dir):
+    """Pembanding klasik (hanya untuk laporan, BUKAN sumber prediksi final)."""
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.neighbors import KNeighborsClassifier
+    models = {
+        "LogisticRegression": LogisticRegression(max_iter=1000),
+        "kNN(k=15)": KNeighborsClassifier(n_neighbors=15),
+        "RandomForest(300)": RandomForestClassifier(n_estimators=300, n_jobs=-1, random_state=SEED),
+    }
+    rows = []
+    print("\nPembanding model klasik (hanya untuk laporan):")
+    for name, m in models.items():
+        t0 = time.time()
+        m.fit(Xtr_np, ytr)
+        acc = float((m.predict(Xva_np) == yva).mean())
+        print(f"  {name:20s} val_acc={acc:.4f} val_err={1 - acc:.4f} time={time.time() - t0:.1f}s")
+        rows.append(dict(dataset=D, model=name, val_acc=round(acc, 5), val_err=round(1 - acc, 5)))
+    pd.DataFrame(rows).to_csv(os.path.join(log_dir, f"baselines_{D}.csv"), index=False)
 
 
 def main():
@@ -177,6 +223,9 @@ def main():
     ap.add_argument("--force", action="store_true", help="boleh menimpa CSV submission yang sudah ada")
     ap.add_argument("--restart", action="store_true", help="abaikan cache, ulangi semua eksperimen")
     ap.add_argument("--no-refit", action="store_true", help="hanya eksperimen validasi, tanpa CSV submission")
+    ap.add_argument("--ensemble", type=int, default=1,
+                    help="jumlah MLP (seed berbeda) untuk ensemble; dipakai di submission hanya jika val acc ensemble >= model tunggal")
+    ap.add_argument("--baseline", action="store_true", help="jalankan pembanding LogReg/kNN/RandomForest (untuk laporan)")
     args = ap.parse_args()
 
     D = args.dataset.upper()
@@ -228,6 +277,7 @@ def main():
     Xtr, Xva = to_t(prep(Xtr_raw)), to_t(prep(Xva_raw))
     ytr_t, yva_t = to_t(ytr, torch.long), to_t(yva, torch.long)
     loss_fn = nn.CrossEntropyLoss()
+    cw_tr = class_weights(ytr, n_cls, device)
 
     # ---------- Eksperimen ----------
     log_path = os.path.join(log_dir, "experiments_v2.csv")
@@ -251,7 +301,8 @@ def main():
         model = make_model(Xtr.shape[1], n_cls, hp["hidden"], hp["dropout"]).to(device)
         t0 = time.time()
         hist, best_ep = fit(model, Xtr, ytr_t, Xva, yva_t, hp["lr"], hp["wd"], hp["bs"],
-                            hp["max_epochs"], hp["patience"])
+                            hp["max_epochs"], hp["patience"],
+                            class_weight=cw_tr if hp.get("cw") else None)
         secs = time.time() - t0
         vloss, vpred = evaluate(model, Xva, yva_t, loss_fn)
         vacc = (vpred == yva_t).float().mean().item()
@@ -292,6 +343,37 @@ def main():
         f.write(f"Konfigurasi: {best_exp['name']} {best_hp}\n\n{rep}\nConfusion matrix:\n{cm}\n")
     print(rep)
 
+    if args.baseline:
+        run_baselines(prep(Xtr_raw), ytr, prep(Xva_raw), yva, D, log_dir)
+
+    # ---------- Ensemble (opsional): K MLP, seed berbeda, konfigurasi terbaik ----------
+    use_ens = False
+    if args.ensemble > 1:
+        print(f"\nEnsemble {args.ensemble} MLP (seed {SEED}..{SEED + args.ensemble - 1}) pada split validasi ...", flush=True)
+        probs = []
+        t0 = time.time()
+        for k in range(args.ensemble):
+            set_seed(SEED + k)
+            m = make_model(Xtr.shape[1], n_cls, best_hp["hidden"], best_hp["dropout"]).to(device)
+            fit(m, Xtr, ytr_t, Xva, yva_t, best_hp["lr"], best_hp["wd"], best_hp["bs"],
+                best_hp["max_epochs"], best_hp["patience"], class_weight=cw_tr if best_hp.get("cw") else None)
+            m.eval()
+            with torch.no_grad():
+                probs.append(torch.softmax(m(Xva), 1))
+            print(f"  anggota {k + 1}: val_acc={(probs[-1].argmax(1) == yva_t).float().mean().item():.4f}", flush=True)
+        ens_acc = (torch.stack(probs).mean(0).argmax(1) == yva_t).float().mean().item()
+        use_ens = ens_acc >= best_acc
+        print(f"Ensemble val_acc={ens_acc:.4f} vs model tunggal {best_acc:.4f} -> "
+              f"{'ensemble dipakai untuk submission' if use_ens else 'model tunggal dipakai (ensemble tidak lebih baik)'}")
+        row = dict(timestamp=datetime.now().isoformat(timespec="seconds"), dataset=D, attempt=args.attempt,
+                   exp=f"ensemble{args.ensemble}_{best_exp['name']}", hidden=str(best_hp["hidden"]),
+                   dropout=best_hp["dropout"], optimizer="AdamW", lr=best_hp["lr"], weight_decay=best_hp["wd"],
+                   batch_size=best_hp["bs"], max_epochs=best_hp["max_epochs"],
+                   early_stop_patience=best_hp["patience"], best_epoch=best_ep, epochs_run="-", seed=SEED,
+                   params="-", val_loss="-", val_acc=round(ens_acc, 5), val_err=round(1 - ens_acc, 5),
+                   train_time_s=round(time.time() - t0, 1), hardware=hw, phase="validation_ensemble")
+        pd.DataFrame([row]).to_csv(log_path, mode="a", header=not os.path.exists(log_path), index=False)
+
     if args.no_refit:
         print("Refit dilewati (--no-refit).")
         return
@@ -305,15 +387,23 @@ def main():
     Xf, yf = to_t(prep_f(X_all)), to_t(y_all, torch.long)
     Xt = to_t(prep_f(X_test_raw))
 
-    model = make_model(Xf.shape[1], n_cls, best_hp["hidden"], best_hp["dropout"]).to(device)
+    cw_f = class_weights(y_all, n_cls, device) if best_hp.get("cw") else None
+    n_members = args.ensemble if use_ens else 1
     t0 = time.time()
-    fit(model, Xf, yf, None, None, best_hp["lr"], best_hp["wd"], best_hp["bs"],
-        best_hp["max_epochs"], best_hp["patience"], epochs=max(best_ep, 1))
+    test_probs = []
+    for k in range(n_members):
+        set_seed(SEED + k)  # k=0 -> SEED, sama seperti model tunggal
+        model = make_model(Xf.shape[1], n_cls, best_hp["hidden"], best_hp["dropout"]).to(device)
+        fit(model, Xf, yf, None, None, best_hp["lr"], best_hp["wd"], best_hp["bs"],
+            best_hp["max_epochs"], best_hp["patience"], epochs=max(best_ep, 1), class_weight=cw_f)
+        model.eval()
+        with torch.no_grad():
+            test_probs.append(torch.softmax(model(Xt), 1))
+        suffix = "" if k == 0 else f"_s{k}"
+        torch.save(model.state_dict(), os.path.join(out_dir, f"{D}_{args.attempt}_final{suffix}.pt"))
     secs = time.time() - t0
-    model.eval()
-    with torch.no_grad():
-        pred_idx = model(Xt).argmax(1).cpu().numpy()
-    torch.save(model.state_dict(), os.path.join(out_dir, f"{D}_{args.attempt}_final.pt"))
+    pred_idx = torch.stack(test_probs).mean(0).argmax(1).cpu().numpy()
+    print(f"Prediksi test dari {'ensemble ' + str(n_members) + ' model' if use_ens else 'model tunggal'}.")
 
     sub = pd.DataFrame({"sample_id": test["sample_id"], "target": classes[pred_idx].astype(int)})
     assert list(sub.columns) == ["sample_id", "target"]
