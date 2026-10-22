@@ -1,0 +1,5 @@
+dataset,model,val_acc
+B,LDA,0.52844
+B,QDA,0.52461
+B,LogReg,0.55454
+B,LogReg+poly2,0.58103

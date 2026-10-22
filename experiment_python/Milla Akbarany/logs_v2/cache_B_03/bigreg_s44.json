@@ -1,0 +1,1 @@
+{"hp": {"hidden": [512, 256, 128], "dropout": 0.4, "lr": 0.001, "wd": 0.01, "bs": 256, "ls": 0.0, "sched": "es", "epochs": 200, "patience": 15, "poly": false}, "val_acc": 0.5959525108337402, "val_loss": 0.9460256695747375, "best_epoch": 106}

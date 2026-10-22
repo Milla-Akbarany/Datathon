@@ -1,0 +1,4 @@
+dataset,model,val_acc,val_err
+B,LogisticRegression,0.55454,0.44546
+B,kNN(k=15),0.54212,0.45788
+B,RandomForest(300),0.55938,0.44062

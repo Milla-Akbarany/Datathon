@@ -62,7 +62,20 @@ DATASET_CFG = {
             dict(name="drop1", hidden=[128, 64], dropout=0.1),
         ],
     ),
-    # "B": dict(lr=..., wd=..., bs=..., max_epochs=..., patience=..., experiments=[...]),
+    # Dataset B: 63.988 baris, 33 fitur, 6 kelas seimbang. v1 terbaik: depth3 [256,128,64] dropout 0.2 (val 59,92%).
+    # 'base' di sini = konfigurasi terbaik v1 sebagai acuan; eksperimen lain mengubah satu faktor darinya.
+    "B": dict(
+        lr=1e-3, wd=1e-4, bs=256, max_epochs=300, patience=20,
+        experiments=[
+            dict(name="base", hidden=[256, 128, 64], dropout=0.2),
+            dict(name="deep4", hidden=[512, 256, 128, 64], dropout=0.2),
+            dict(name="wide3", hidden=[512, 256, 128], dropout=0.2),
+            dict(name="drop3", hidden=[256, 128, 64], dropout=0.3),
+            dict(name="wd1e-3", hidden=[256, 128, 64], dropout=0.2, wd=1e-3),
+            dict(name="lr5e-4", hidden=[256, 128, 64], dropout=0.2, lr=5e-4),
+            dict(name="bs512", hidden=[256, 128, 64], dropout=0.2, bs=512),
+        ],
+    ),
     # Dataset C: 9.600 baris, hanya 3 fitur, 2 kelas (64/36). Data kecil -> training cepat.
     # Dengan 3 fitur, batas kelas kemungkinan nonlinear, jadi kedalaman/lebar yang diuji.
     "C": dict(

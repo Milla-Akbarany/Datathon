@@ -1,0 +1,2 @@
+timestamp,dataset,attempt,exp,members,seeds,n_models,val_acc_ensemble,val_err_ensemble,train_time_s_new,phase
+2026-10-22T14:03:23,B,04,diverse_ensemble,base+cos+reg+bigreg+ls,3,15,0.60119,0.39881,4526.2,refit_full_train_ensemble
