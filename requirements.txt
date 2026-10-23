@@ -1,0 +1,8 @@
+# Datathon Deep Learning - Tim T017
+# Versi diambil dari output notebook (Google Colab, Python 3.13)
+tensorflow==2.21.0
+scikit-learn==1.6.1
+pandas==2.2.3
+numpy==2.1.3
+joblib==1.6.0
+matplotlib==3.10.0

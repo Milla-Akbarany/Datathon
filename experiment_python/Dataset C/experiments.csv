@@ -1,0 +1,4 @@
+dataset,config_name,seed,val_accuracy,val_error,training_time,hidden_layers,activation,dropout,learning_rate,batch_size,optimizer,epochs_run
+C,Config_1_Baseline,42,0.85781,0.14219,24.39,"[64, 32]",relu,0.3,0.001,32,adam,39
+C,Config_2_Deeper,42,0.85938,0.14062,15.57,"[128, 64, 32]",relu,0.2,0.0005,64,adam,37
+C,Config_3_Tuned_C_Orig,42,0.86094,0.13906,19.42,"[128, 128, 128]",relu,0.3,0.0003,64,adam,42

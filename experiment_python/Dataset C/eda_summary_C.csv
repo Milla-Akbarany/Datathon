@@ -1,0 +1,2 @@
+dataset,n_train,n_test,n_features,missing_train,missing_test,n_classes,majority_class_pct,minority_class_pct,imbalance_ratio
+C,9600,2400,3,0,0,2,64.47,35.53,1.81

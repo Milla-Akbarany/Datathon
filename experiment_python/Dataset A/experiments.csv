@@ -1,0 +1,10 @@
+dataset,config_name,seed,val_accuracy,val_error,training_time,hidden_layers,activation,dropout,learning_rate,batch_size,optimizer,batch_norm,max_epochs,epochs_run
+A,Config_1_Baseline,42,0.81434,0.18566,264.53,"[64, 32]",relu,0.3,0.001,32,adam,False,100,100
+A,Config_2_Deeper,42,0.82786,0.17214,149.46,"[128, 64, 32]",relu,0.2,0.0005,64,adam,False,100,100
+A,Config_3_Tuned,42,0.85034,0.14966,134.83,"[128, 128, 128]",relu,0.0,0.001,64,adam,False,300,95
+B,Config_1_Baseline,42,0.58126,0.41874,430.89,"[64, 32]",relu,0.3,0.001,32,adam,False,100,100
+B,Config_2_Deeper,42,0.59376,0.40624,251.99,"[128, 64, 32]",relu,0.2,0.0005,64,adam,False,100,100
+B,Config_3_Tuned,42,0.59752,0.40248,249.11,"[256, 128, 64]",gelu,0.2,0.001,64,adam,False,300,65
+C,Config_1_Baseline,42,0.85781,0.14219,27.01,"[64, 32]",relu,0.3,0.001,32,adam,False,100,39
+C,Config_2_Deeper,42,0.85938,0.14062,17.78,"[128, 64, 32]",relu,0.2,0.0005,64,adam,False,100,37
+C,Config_3_Tuned,42,0.86094,0.13906,21.9,"[128, 128, 128]",relu,0.3,0.0003,64,adam,False,300,42

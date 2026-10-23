@@ -1,0 +1,4 @@
+dataset,model,val_accuracy,time_s
+C,MLP terbaik – Config_3_Tuned_C_Orig,0.8609,
+C,RandomForest (pembanding),0.8448,2.4
+C,XGBoost (pembanding),0.8432,0.4
